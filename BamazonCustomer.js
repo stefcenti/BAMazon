@@ -23,8 +23,8 @@ function BamazonCustomer(debug = true) {
 		if(self.debug) { console.log("Connected as id " + self.connection.threadId) };
 	});
 
-//	this.prompt = require('prompt');
-//	this.prompt.start();
+	this.prompt = require('prompt');
+ 	this.prompt.start();
 
 	this.displayInventory = function() {
 
@@ -36,25 +36,96 @@ function BamazonCustomer(debug = true) {
   			for (var i=0; i<rows.length; i++) {
   				self.printItem(rows[i]);
   			}
+
+  			self.purchasePrompt();
 		});
 	}
 
-	this.promptUser = function () {
+	this.purchasePrompt = function () {
+		if (this.debug) { console.log("purchasePrompt()"); }
+
+		var schema = {
+			properties: {
+				product_id: {
+					pattern: /[0-9]/,
+					message: 'Product Id must be a positive number.',
+					required: true
+				},
+				quantity: {
+					pattern: /[0-9]/,
+					message: 'Quantity must be a positive number.',
+					required: true
+				}
+			}
+		};
+ 
+		this.prompt.get(schema, function (err, result) {
+
+			if (err) throw err;
+		
+			if (self.debug) {
+				console.log('Command-line input received:');
+				console.log('  product: ' + result.product_id);
+				console.log('  quantity: ' + result.quantity);
+			}
+
+			self.purchaseProduct(result.product_id, result.quantity);
+		});
+	}
+
+	// Prompt user to press any key to continue or 'q' to quit.
+	// If the user enters 'q', the connection will be closed.
+	// Otherwise, the flag will be checked to see what to do next.
+	this.continuePrompt = function(flag) {
+
+		self.prompt.get({properties:{action:{message:"Press any Key to Continue, 'q' to quit"}}}, 
+			function (err, result) {
+
+			//console.log("Prompt Result: " + JSON.stringify(result));
+			if(result.action.toLowerCase() === 'q'){
+				self.connection.end();
+				return;
+			}
+
+			if (flag == "purchase") {
+				self.displayInventory();
+			}
+		});
 
 	}
 
-	this.purchaseProduct = function(product, qty) {
+	this.purchaseProduct = function(product_id, qty) {
+		if(this.debug) { console.log("purchaseProduct()"); }
 
-		this.connection.query('SELECT * FROM Products WHERE ProductName=? AND ? < StockQuantity', 
-			['product', 'qty'], function(err, rows, fields) {
+		this.connection.query('SELECT * FROM Products WHERE ItemID=? AND ? <= StockQuantity', 
+			[product_id, qty], function(err, rows, fields) {
   		
   			if (err) throw err;
-	
-			self.printHeading();
 
-  			for (var i=0; i<rows.length; i++) {
-  				self.printItem(rows[i]);
+  			if (rows.length < 1) {
+  				console.log("Insufficient Quantity");
+  				self.continuePrompt("purchase");
+  				return;
   			}
+
+  			var item = rows[0];
+
+  			item.StockQuantity -= qty;
+
+			self.connection.query("UPDATE Products SET ? WHERE ?", 
+				[{StockQuantity: item.StockQuantity}, {ItemID: item.ItemID}], function(err, res) {
+
+				if(err) throw err;
+
+				if(self.debug) { console.log("Stock Quantity Updated Successfully!"); }
+
+	  			console.log(" Purchase Info");
+	  			console.log("---------------");
+	  			console.log("Item Purchased: " + item.ProductName);
+	  			console.log("Cost: " + qty * item.Price);
+
+  				self.continuePrompt("purchase");
+			});
 		});
 	}
 
@@ -94,4 +165,5 @@ function BamazonCustomer(debug = true) {
 var bc = new BamazonCustomer();
 
 bc.displayInventory();
+//bc.promptUser();
 
