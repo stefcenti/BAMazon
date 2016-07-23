@@ -9,6 +9,9 @@ function BamazonCustomer(debug = true) {
 	this.hformat = "%-5s   %-40s   %-30s   %-8s   %-8s";
 	this.rformat = "%-5s | %-40s | %-30s | % 8.2f | %8s";
 
+	this.prompt = require('prompt');
+ 	this.prompt.start();
+
 	this.mysql = require('mysql');
 	this.connection = this.mysql.createConnection({
 		host: "localhost",
@@ -22,9 +25,6 @@ function BamazonCustomer(debug = true) {
 		if(err) throw err;
 		if(self.debug) { console.log("Connected as id " + self.connection.threadId) };
 	});
-
-	this.prompt = require('prompt');
- 	this.prompt.start();
 
 	this.displayInventory = function() {
 
