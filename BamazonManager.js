@@ -176,10 +176,75 @@ function BamazonManager(debug = true) {
 	this.addNewProduct = function() {
 		if(this.debug) console.log("Manager.addNewProduct()");
 
-		self.displayMenu();
+		// Prompt for Product ID and quantity to add
+ 
+ 		console.log('\nADD NEW PRODUCT TO INVENTORY');
+ 		console.log('------------------------------');
+
+  		var schema = {
+			properties: {
+				ProductName: {
+					description: 'Enter the Product Name:',
+					required: true
+				},
+				DepartmentName: {
+					description: 'Enter the Product\'s Department Name:',
+					required: true
+				},
+				Price: {
+					description: 'Enter the Product Price:',
+//					type: 'number',
+					pattern: /[0-9].[0-9]/,
+					message: 'Price must be a number.',
+					required: true
+				},
+				StockQuantity: {
+					description: 'Enter the Stock Quantity to Add:',
+					type: 'integer',
+//					pattern: /[0-9]/,
+					message: 'Quantity must be a integer.',
+					required: true
+				}
+			}
+		};
+ 
+		this.prompt.name = "";
+		this.prompt.delimiter = "";
+
+		this.prompt.get(schema, function (err, pResult) {
+
+			if (err) throw err;
+		
+			if (self.debug) {
+				console.log('Command-line input received:');
+				console.log('  ProductName: ' + pResult.ProductName);
+				console.log('  DepartmentName: ' + pResult.DepartmentName);
+				console.log('  Price: ' + pResult.Price);
+				console.log('  StockQuantity: ' + pResult.StockQuantity);
+			}
+
+			self.connection.query(
+				"INSERT INTO Products SET " + 
+						"ProductName = ?, " +
+						"DepartmentName = ?, " + 
+						"Price = ?, " + 
+						"StockQuantity = ? ", 
+				[pResult.ProductName, 
+				 pResult.DepartmentName, 
+				 pResult.Price, 
+				 pResult.StockQuantity], function(err, qResult) {
+
+				if(err) throw err;
+
+				if(self.debug) { console.log("New Product Added Successfully!"); }
+
+ 				self.displayMenu();
+			});
+		});
 	}
 
 } // End BamazonManager
 
-var bman = new BamazonManager();
+// Remove boolean arg or change to true to turn on debugging
+var bman = new BamazonManager(false);
 
